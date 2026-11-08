@@ -1,0 +1,144 @@
+\section{Introduzione}
+\label{sec:introduzione}
+
+La relazione descrive l'implementazione in Java del progetto di Algoritmi e
+Strutture Dati dell'A.A.\ 2024/25: il calcolo di cammini minimi su griglie
+8-connesse con ostacoli mediante l'algoritmo ricorsivo \cmin{} proposto
+dalla traccia~\cite{traccia}. Il progetto è stato svolto singolarmente,
+secondo i requisiti previsti per i gruppi di una persona.
+
+Il lavoro segue i quattro compiti della traccia:
+
+\begin{itemize}
+  \item \textbf{Generazione delle griglie} (\cref{sec:compito1}): un
+        generatore di griglie con ostacoli in posizione casuale,
+        riproducibili tramite seed e salvate in JSON.
+  \item \textbf{Contesto, complemento e distanza libera}
+        (\cref{sec:compito2}): il calcolo di contesto, complemento e
+        frontiera di una cella in un'unica passata di costo lineare nel
+        numero di celle.
+  \item \textbf{Algoritmo CamminoMin} (\cref{sec:compito3}): l'implementazione
+        ricorsiva, con ordinamento della frontiera, potatura e
+        memoizzazione, che restituisce la lunghezza del cammino minimo e la
+        sequenza dei landmark; una variante propaga alle chiamate annidate
+        il limite del cammino migliore già trovato.
+  \item \textbf{Sperimentazione} (\cref{sec:compito4}): l'analisi teorica di
+        tempo e spazio, un piano di 67 istanze che confronta quattro varianti
+        dell'algoritmo con verifica di correttezza, e una serie che individua
+        i limiti di scala delle due varianti principali.
+\end{itemize}
+
+Le ultime due sezioni riportano le conclusioni e le istruzioni per usare il
+codice.
+
+\subsection{Strumenti}
+
+Il progetto è scritto in Java ed è compilato da Maven con \code{-{}-release 17}:
+il bytecode e le API usate sono quelli di Java~17. Build, test e misure sono
+stati eseguiti con Eclipse Temurin 21.0.6. Le dipendenze esterne sono due:
+\code{org.json} per leggere e scrivere le griglie e JUnit~5 per i test.
+Maven scarica queste dipendenze, esegue i test e produce un JAR eseguibile
+che include \code{org.json}: per usare il programma basta quindi Java,
+mentre Maven serve solo per ricompilarlo. I grafici della sperimentazione
+sono generati da uno script Python con \code{pandas} e \code{matplotlib}.
+
+\subsection{Organizzazione del codice}
+
+Il codice applicativo si trova in \code{src/main/java/mio}, diviso in un
+package per compito (\cref{tab:package}). I test sono in
+\code{src/test/java/mio} e seguono la stessa suddivisione.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Package} & \textbf{Contenuto} \\
+\midrule
+\code{mio.griglia}  & Interfacce della griglia e delle celle, matrice di base
+                      (\code{GrigliaMatrix}) e vista immutabile con ostacoli
+                      aggiuntivi (\code{GrigliaOstacoliView}) \\
+\code{mio.compito1} & Generatore casuale (\code{GeneratoreGriglia}) e lettura e
+                      scrittura JSON (\code{LettoreGriglia}) \\
+\code{mio.compito2} & Stato della cella (\code{StatoCella}), distanza libera
+                      (\code{DistanzaLibera}), chiusura e frontiera
+                      (\code{CalcoloChiusura}, \code{GrigliaConOrigine}) \\
+\code{mio.compito3} & Algoritmo \code{CamminoMin} e sue varianti
+                      (\code{VarianteCamminoMin}), landmark (\code{Landmark}) e
+                      risultato (\code{Cammino}) \\
+\code{mio.compito4} & Esecuzione nei due versi e raccolta delle metriche
+                      (\code{Sperimentazione}, \code{StatisticheEsecuzione}),
+                      scrittura del CSV (\code{ScritturaFile}) e serie sui limiti
+                      di scala (\code{LimitiScala}) \\
+\code{mio.Main}     & Piano sperimentale e interfaccia a riga di comando per i
+                      Compiti Due e Tre \\
+\bottomrule
+\end{tabularx}
+\caption{Package del progetto.}
+\label{tab:package}
+\end{table}
+
+\subsection{Stato di una cella}
+\label{sec:statocella}
+
+Durante il calcolo della chiusura ogni cella accumula più informazioni: può
+essere un ostacolo, appartenere al contesto o al complemento, trovarsi su una
+delle otto linee rette uscenti dall'origine, essere l'origine stessa o una
+cella di frontiera. Alcune proprietà si escludono: un ostacolo non appartiene
+mai alla chiusura e, dopo la passata finale del calcolo
+(\cref{sec:chiusura}), nessuna cella è insieme nel contesto e nel
+complemento. Altre si sommano: l'origine appartiene anche al contesto e una
+cella di frontiera appartiene sempre al contesto o al complemento. Per
+rappresentare ogni combinazione con un solo valore, lo stato di una cella è
+un intero in cui ciascun bit corrisponde a una proprietà.
+
+L'enumerazione \code{StatoCella} associa a ogni proprietà un bit
+(\cref{tab:statocella}) e due interi: \code{value}, cioè i bit da accendere
+per assegnare la proprietà, e \code{mask}, cioè i bit da controllare per
+verificarla; per le sei proprietà i due interi coincidono con il bit
+corrispondente. L'enumerazione offre quattro operazioni, ciascuna ridotta a
+una sola operazione bit a bit e quindi di costo $O(1)$:
+\[
+  \begin{aligned}
+    \code{is}(s) &\iff (s \mathbin{\&} \mathit{mask}) \neq 0, &\qquad
+    \code{addTo}(s) &= s \mathbin{|} \mathit{value}, \\
+    \code{isNot}(s) &\iff (s \mathbin{\&} \mathit{mask}) = 0, &\qquad
+    \code{removeTo}(s) &= s \mathbin{\&} \lnot\mathit{mask}.
+  \end{aligned}
+\]
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}r l l l@{}}
+\toprule
+\textbf{Bit} & \textbf{Nome} & \textbf{Maschera} & \textbf{Significato} \\
+\midrule
+0 & \code{CONTESTO}     & \code{00000001} & raggiungibile con un cammino libero di tipo 1 \\
+1 & \code{REGINA}       & \code{00000010} & su una delle otto linee rette uscenti da $O$ \\
+2 & \code{ORIGINE}      & \code{00000100} & origine della chiusura \\
+3 & \code{COMPLEMENTO}  & \code{00001000} & raggiungibile solo con un cammino libero di tipo 2 \\
+4 & \code{FRONTIERA}    & \code{00010000} & cella di frontiera \\
+5--6 & ---            & ---             & non usati \\
+7 & \code{OSTACOLO}     & \code{10000000} & cella non attraversabile \\
+--- & \code{CHIUSURA}   & \code{00001001} & contesto oppure complemento \\
+\bottomrule
+\end{tabular}
+\caption{Bit dello stato di una cella.}
+\label{tab:statocella}
+\end{table}
+
+\code{CHIUSURA} non ha bit da assegnare, perché non è una proprietà autonoma,
+ma la sua maschera contiene i bit di contesto e complemento: un solo
+\code{CHIUSURA.is(s)} stabilisce se la cella appartiene alla chiusura. È il
+controllo del caso base di \cmin{} (\cref{sec:implementazione-cmin}).
+I landmark non hanno un bit: sono conservati come lista nel risultato di
+\cmin{}. Un esempio degli stati prodotti dal calcolo della chiusura è nella
+\cref{tab:stati-esempio}.
+
+Lo stato occupa un \code{int}, anche se otto bit starebbero in un
+\code{byte}: è il tipo restituito da \code{ICella.stato()} e usato nel
+formato JSON. Una matrice di \code{byte} ridurrebbe di quattro volte la
+memoria di ogni chiusura; la \cref{sec:analisi-teorica} mostra però che nei
+casi critici la memoria è occupata soprattutto dalla cache di \cmin{}, non
+dalle matrici.

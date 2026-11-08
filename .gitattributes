@@ -1,0 +1,11 @@
+# Preserve binary artifacts byte-for-byte, independently of core.autocrlf.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.jar binary
+*.class binary
+*.zip binary

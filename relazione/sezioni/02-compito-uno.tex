@@ -1,0 +1,105 @@
+\section{Compito Uno: generazione delle griglie}
+\label{sec:compito1}
+
+\subsection{Parametri}
+
+Il generatore \code{GeneratoreGriglia.genera(W, H, N, seed)} produce una
+griglia di $W \times H$ celle con esattamente $N$ ostacoli in posizioni
+casuali. L'utente può configurare:
+
+\begin{itemize}
+  \item le dimensioni $W$ e $H$, che devono essere positive;
+  \item il numero di ostacoli $N$, con $0 \le N \le W H$; dalla riga di
+        comando si impone anche $N < W H$, perché servono almeno una cella
+        libera per l'origine e una per la destinazione;
+  \item il \emph{seed} del generatore pseudo-casuale.
+\end{itemize}
+
+La densità degli ostacoli $N/(WH)$ è il parametro che più influenza il costo
+di \cmin{} (\cref{sec:limiti-scala}). Il seed rende ogni griglia
+riproducibile: la stessa quaterna $(W,H,N,\mathit{seed})$ produce sempre la
+stessa griglia, perché \code{java.util.Random} è un generatore deterministico
+a partire dal seed~\cite{random}.
+
+\subsection{Algoritmo}
+
+Le celle vengono estratte uniformemente; una matrice booleana evita di
+scegliere due volte la stessa cella. Le celle estratte sono raccolte in una
+lista, che viene aggiunta alla griglia con un'unica operazione quando sono
+stati scelti esattamente $N$ ostacoli (\cref{alg:genera}).
+
+\begin{algorithm}[H]
+\caption{Generazione di una griglia con ostacoli casuali}
+\label{alg:genera}
+\begin{algorithmic}[1]
+\Require dimensioni $W, H > 0$, numero di ostacoli $0 \le N \le WH$, $\mathit{seed}$
+\Ensure griglia $W \times H$ con esattamente $N$ ostacoli
+\Procedure{GeneraGriglia}{$W, H, N, \mathit{seed}$}
+  \State $g \gets$ griglia $W \times H$ con tutte le celle attraversabili
+  \State $\mathit{occupata} \gets$ matrice booleana $H \times W$ inizializzata a \textbf{false}
+  \State $\mathit{rng} \gets \textsc{Random}(\mathit{seed})$
+  \State $L \gets \seq{}$ \Comment{celle scelte come ostacoli}
+  \While{$|L| < N$}
+    \State $x \gets \mathit{rng}.\textsc{Intero}(W)$; \quad $y \gets \mathit{rng}.\textsc{Intero}(H)$
+    \If{\textbf{not} $\mathit{occupata}[y][x]$}
+      \State $\mathit{occupata}[y][x] \gets$ \textbf{true}
+      \State aggiungi $(x, y)$ a $L$
+    \EndIf
+  \EndWhile
+  \State \Return $g.\textsc{AggiungiOstacoli}(L)$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Costo.} Quando sono già stati collocati $i$ ostacoli, un'estrazione
+trova una cella libera con probabilità $(WH - i)/(WH)$. Il numero atteso di
+estrazioni è quindi
+\[
+  \sum_{i=0}^{N-1} \frac{WH}{WH - i},
+\]
+che resta al più $2N$ finché $N \le WH/2$. L'inizializzazione della
+matrice e l'unica vista finale (\cref{sec:immutabilita}) costano $O(WH)$,
+quindi il costo complessivo è $O(WH)$ per $N \le WH/2$. Una prima versione
+creava una vista per ogni ostacolo, copiando ogni volta la mappa di bit, con
+costo $O(N \cdot WH)$: la versione attuale produce le stesse griglie, come
+verifica un test dedicato, e rende la generazione trascurabile anche per
+griglie molto più grandi di quelle usate nel progetto.
+
+\subsection{Griglie immutabili}
+\label{sec:immutabilita}
+
+Aggiungere un ostacolo non modifica la griglia esistente: il metodo
+\code{addObstacle} restituisce una nuova \code{GrigliaOstacoliView}, formata
+dalla griglia di base e da un \code{BitSet}~\cite{bitset} con tutti gli
+ostacoli, quelli della base e quelli aggiunti. Se la griglia di partenza è
+già una vista, il suo \code{BitSet} viene copiato ed esteso, così le viste
+non formano catene: verificare se una cella è un ostacolo costa $O(1)$ e non
+alloca oggetti. Lo stesso \code{BitSet}, mai modificato dopo la
+costruzione, è usato come chiave della cache di \cmin{}
+(\cref{sec:ottimizzazioni}).
+
+Questa scelta serve soprattutto al Compito Tre. Ogni chiamata ricorsiva di
+\cmin{} lavora su una griglia in cui la chiusura della chiamata precedente è
+diventata un insieme di ostacoli; i rami ricorsivi fratelli devono però
+partire dalla stessa griglia. Con viste immutabili ogni ramo riceve la propria
+griglia e nessun ramo vede gli ostacoli aggiunti da un altro.
+
+\subsection{Persistenza in JSON}
+
+\code{LettoreGriglia} salva e carica una griglia come array JSON di righe.
+Ogni elemento è lo stato della cella secondo la \cref{tab:statocella}: $0$
+per una cella libera, $128$ per un ostacolo.
+
+\begin{lstlisting}
+[
+  [0, 128,   0],
+  [0,   0, 128]
+]
+\end{lstlisting}
+
+Il caricamento rifiuta JSON non valido, matrici vuote o non rettangolari e
+valori fuori dall'intervallo $[0,255]$, con un'eccezione esplicita invece di
+un risultato parziale. Nel piano sperimentale ogni griglia generata viene
+salvata in \code{risultati/griglie\_json/} e ricaricata prima di eseguire
+\cmin{}: i 23 file prodotti sono gli input effettivi delle misure e
+permettono di ripetere ogni esperimento sulla stessa griglia.

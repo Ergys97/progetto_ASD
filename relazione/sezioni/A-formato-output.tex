@@ -1,0 +1,94 @@
+\section{Formato dei file di output}
+\label{app:formato}
+
+\subsection{\code{esperimenti.csv}}
+
+Una riga per istanza e variante, 31 colonne, decimali con il punto. Le sequenze dei
+landmark sono racchiuse fra virgolette perché contengono virgole; una
+lunghezza infinita è scritta \code{INF} e la relativa sequenza \code{[]}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{6.1cm} X@{}}
+\toprule
+\textbf{Colonne} & \textbf{Significato} \\
+\midrule
+\code{gridId} & identificativo dell'istanza, per esempio
+  \code{G12x12\_d10\_s50\_p1} (dimensioni, densità in percentuale, seed,
+  numero della coppia) \\
+\code{variante} & variante di \cmin{} (\cref{tab:varianti}) \\
+\code{tipoGriglia} & tipo di griglia, sempre \code{Casuale} \\
+\code{width}, \code{height}, \code{nOstacoli}, \code{seed} & parametri della griglia \\
+\code{Ox}, \code{Oy}, \code{Dx}, \code{Dy} & coordinate effettive di $O$ e $D$ \\
+\code{lunghezzaOD}, \code{lunghezzaDO} & lunghezze nei due versi, 6 decimali \\
+\code{sequenzaLandmarkOD}, \code{sequenzaLandmarkDO} & sequenze dei landmark,
+  ogni elemento nella forma \code{(x=..,y=..,tipo=..)} \\
+\code{correttezza} & esito della verifica di simmetria \\
+\code{frontieraTot} & celle di frontiera di tutte le chiusure calcolate \\
+\code{falsiRiga16} & volte in cui la riga 16 è risultata falsa \\
+\code{falsiRiga17} & potature dovute alla sola riga 17 \\
+\code{pruningTotale} & somma delle due precedenti \\
+\code{chiamateRicorsive}, \code{cacheHit} & invocazioni totali e invocazioni
+  servite dalla cache \\
+\code{profonditaMassima} & profondità massima della ricorsione \\
+\code{chiusureAttivePicco} & matrici di chiusura presenti
+  contemporaneamente al picco \\
+\code{celleChiusuraTotali} & somma delle dimensioni delle chiusure calcolate \\
+\code{memoriaMatriciPiccoBytesStimata} & $\code{chiusureAttivePicco} \cdot
+  W \cdot H \cdot 4$ byte \\
+\code{warmupEseguiti}, \code{ripetizioniTempo} & riscaldamenti e ripetizioni
+  misurate \\
+\code{tempoMinNs}, \code{tempoMedianoNs}, \code{tempoMaxNs} & tempi delle
+  ripetizioni in nanosecondi, versi $O \to D$ e $D \to O$ insieme \\
+\bottomrule
+\end{tabularx}
+\caption{Colonne di \code{esperimenti.csv}. Tutti i contatori sommano i due
+versi.}
+\end{table}
+
+\subsection{\code{limiti\_scala.csv}}
+
+Una riga per variante e coppia, 24 colonne.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}>{\raggedright\arraybackslash}p{6.1cm} X@{}}
+\toprule
+\textbf{Colonne} & \textbf{Significato} \\
+\midrule
+\code{variante} & \code{base} oppure \code{limite-propagato} \\
+\code{width}, \code{height}, \code{densitaPerc}, \code{nOstacoli}, \code{seed}
+  & parametri della griglia \\
+\code{Ox}, \code{Oy}, \code{Dx}, \code{Dy} & coordinate di $O$ e $D$ \\
+\code{esitoOD}, \code{esitoDO} & \code{OK}, \code{TIMEOUT}, \code{OOM},
+  \code{STACK} o \code{ERRORE}; \code{esitoDO} vale \code{NON\_ESEGUITO} se
+  il verso $O \to D$ non è terminato \\
+\code{lunghezzaOD}, \code{lunghezzaDO} & lunghezze, \code{INF} o vuote se il
+  verso non è terminato \\
+\code{simmetria} & \code{true} o \code{false} se entrambi i versi sono
+  terminati, altrimenti \code{ND} \\
+\code{tempoODms}, \code{tempoDOms} & tempo di una singola esecuzione a
+  freddo, in millisecondi \\
+\code{chiamateOD}, \code{profonditaOD}, \code{frontieraOD}, \code{cacheHitOD}
+  & contatori del verso $O \to D$ \\
+\code{piccoHeapMBOD} & somma dei picchi delle aree di heap della JVM, in MB \\
+\code{timeoutMs}, \code{heapMax} & limiti applicati a ogni verso \\
+\bottomrule
+\end{tabularx}
+\caption{Colonne di \code{limiti\_scala.csv}.}
+\end{table}
+
+\subsection{\code{riassunti.txt}}
+
+Una riga per ogni riga di \code{esperimenti.csv}, nel formato del riassunto
+della \cref{sec:contatori}, nello stesso ordine del CSV.
+
+\subsection{Griglie JSON}
+
+Ogni file di \code{risultati/griglie\_json/} contiene un array di righe;
+ogni elemento è lo stato della cella secondo la \cref{tab:statocella}
+($0$ libera, $128$ ostacolo). Il nome del file riporta numero dello scenario,
+dimensioni, ostacoli e seed, per esempio
+\code{scenario\_02\_12x12\_15ost\_seed50.json}.

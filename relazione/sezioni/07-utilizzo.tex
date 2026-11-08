@@ -1,0 +1,135 @@
+\section{Utilizzo del codice}
+\label{sec:utilizzo}
+
+\subsection{Contenuto della consegna}
+
+\begin{lstlisting}
+progetto_ASD/
+|-- README.md
+|-- pom.xml                   build Maven
+|-- asd-project.jar           eseguibile precompilato
+|-- requirements-report.txt   dipendenze Python per i grafici
+|-- src/main/java/mio/        codice applicativo
+|-- src/test/java/mio/        test JUnit
+|-- risultati/
+|   |-- esperimenti.csv       piano sperimentale (67 istanze, 215 righe)
+|   |-- riassunti.txt         riassunto di ogni riga del piano
+|   |-- limiti_scala.csv      serie sui limiti di scala (108 coppie per variante)
+|   |-- griglie_json/         23 griglie del piano
+|   |-- grafici/              grafici della relazione
+|   `-- genera_grafici.py     script di analisi
+`-- relazione/                sorgenti LaTeX e PDF di questa relazione
+\end{lstlisting}
+
+\subsection{Requisiti}
+
+\begin{itemize}
+  \item Java 17 o successivo per eseguire il JAR;
+  \item Maven 3.9 o successivo per compilare ed eseguire i test;
+  \item Python 3 con i pacchetti di \code{requirements-report.txt} per
+        rigenerare i grafici;
+  \item una distribuzione \LaTeX{} con \code{latexmk} per ricompilare la
+        relazione.
+\end{itemize}
+
+\subsection{Esecuzione}
+
+Tutti i comandi vanno eseguiti dalla radice della consegna: i file di
+output sono scritti nella cartella \code{risultati/}.
+
+\paragraph{Piano sperimentale.} Senza argomenti l'applicazione esegue il
+piano della \cref{sec:protocollo}, stampa un riassunto per istanza e
+variante e riscrive \code{esperimenti.csv}, \code{riassunti.txt} e le griglie
+della cartella \code{griglie\_json/}. Richiede meno di un minuto.
+
+\begin{lstlisting}
+java -jar asd-project.jar
+\end{lstlisting}
+
+\paragraph{Serie sui limiti di scala.} Riscrive
+\code{risultati/limiti\_scala.csv} per le varianti \code{base} e
+\code{limite-propagato}. Richiede circa 18 minuti, quasi tutti dovuti alle
+esecuzioni che raggiungono il limite di 10 s; indicando una variante si
+esegue la serie solo per quella.
+
+\begin{lstlisting}
+java -jar asd-project.jar --limiti-scala
+java -jar asd-project.jar --limiti-scala limite-propagato
+\end{lstlisting}
+
+\paragraph{Compito Due.} Calcola contesto, complemento e frontiera di $O$ e
+la distanza libera fra $O$ e $D$ su una griglia salvata
+(\cref{sec:applicazione-chiusura}).
+
+\begin{lstlisting}
+java -jar asd-project.jar --grid-input risultati/griglie_json/scenario_02_12x12_15ost_seed50.json --origin 0,0 --destination 10,10 --chiusura
+\end{lstlisting}
+
+\paragraph{Compito Tre, istanza singola.} Genera una griglia con i
+parametri indicati, oppure la legge da un file JSON, esegue \cmin{} nei due
+versi una sola volta con la variante scelta e salva il risultato. Se $O$ o
+$D$ cadono su un ostacolo viene usata la cella libera più vicina e
+l'applicazione lo segnala.
+
+\begin{lstlisting}
+java -jar asd-project.jar --width 20 --height 20 --obstacles 40 --seed 77 --origin 0,0 --destination 19,19 --summary true --output risultati/prova.csv --grid-output risultati/prova.json
+java -jar asd-project.jar --grid-input risultati/prova.json --origin 0,0 --destination 19,19 --variante limite-propagato
+\end{lstlisting}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Opzione} & \textbf{Significato e valore predefinito} \\
+\midrule
+\code{-{}-width N}, \code{-{}-height N} & dimensioni della griglia generata (20 e 20) \\
+\code{-{}-obstacles N}   & numero di ostacoli, da 0 a $WH-1$ (20) \\
+\code{-{}-seed N}        & seed del generatore (42) \\
+\code{-{}-grid-input f.json} & griglia letta da file invece che generata;
+                           esclude le quattro opzioni precedenti e
+                           \code{-{}-grid-output}; nel CSV il seed vale $-1$ \\
+\code{-{}-origin x,y}    & origine $O$ (\code{0,0}) \\
+\code{-{}-destination x,y} & destinazione $D$ (angolo opposto all'origine) \\
+\code{-{}-chiusura}      & esegue solo il Compito Due: mappa della chiusura di $O$,
+                           conteggi e $\dlib(O,D)$ \\
+\code{-{}-chiusura-output f.json} & con \code{-{}-chiusura}, salva gli stati delle celle \\
+\code{-{}-variante v}    & variante di \cmin{}: \code{base} (predefinita),
+                           \code{senza-cache}, \code{senza-ordinamento},
+                           \code{limite-propagato} \\
+\code{-{}-summary true|false} & stampa del riassunto (\code{true}) \\
+\code{-{}-output f.csv}  & CSV del risultato (\code{risultati/esperimento\_personalizzato.csv}) \\
+\code{-{}-grid-output f.json} & griglia generata (\code{risultati/griglie\_json/personalizzata.json}) \\
+\code{-{}-limiti-scala [v]} & serie sui limiti di scala, per entrambe le
+                           varianti principali o solo per $v$; va usata da sola \\
+\code{-{}-help}          & elenco delle opzioni \\
+\bottomrule
+\end{tabularx}
+\caption{Opzioni della riga di comando.}
+\label{tab:opzioni}
+\end{table}
+
+\subsection{Compilazione e test}
+
+\begin{lstlisting}
+mvn -q clean package
+java -jar target/asd-project-1.0-SNAPSHOT.jar
+\end{lstlisting}
+
+Il primo comando compila il codice, esegue i 68 test e crea in
+\code{target/} un JAR equivalente a \code{asd-project.jar}. Per eseguire
+solo i test si usa \code{mvn -q test}.
+
+\subsection{Grafici e relazione}
+
+\begin{lstlisting}
+python -m pip install -r requirements-report.txt
+python risultati/genera_grafici.py
+cd relazione
+latexmk -pdf Relazione_ASD_2024_25.tex
+\end{lstlisting}
+
+Lo script dei grafici verifica la struttura dei due file CSV e la coerenza
+delle lunghezze fra varianti prima di disegnare, scrive le immagini in
+\code{risultati/grafici/}, da cui la relazione le include direttamente, e
+stampa i valori riassuntivi riportati nella \cref{sec:compito4}.

@@ -1,0 +1,26 @@
+# Build Java
+target/
+
+# Python
+.venv*/
+__pycache__/
+.matplotlib-cache/
+
+# File intermedi LaTeX
+relazione/*.aux
+relazione/*.log
+relazione/*.out
+relazione/*.toc
+relazione/*.fls
+relazione/*.fdb_latexmk
+relazione/*.synctex.gz
+
+# IDE e sistema operativo
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Uscite predefinite dell'istanza singola da riga di comando
+risultati/esperimento_personalizzato.csv
+risultati/griglie_json/personalizzata.json

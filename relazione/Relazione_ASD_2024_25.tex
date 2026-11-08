@@ -1,0 +1,143 @@
+\documentclass[11pt,a4paper]{article}
+
+% --- Codifica, lingua e caratteri ----------------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[italian]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[a4paper,top=2.5cm,bottom=2.5cm,left=2.6cm,right=2.6cm]{geometry}
+
+% --- Matematica, tabelle, figure ------------------------------------------
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx,array,multirow}
+\usepackage{float}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{subcaption}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={,},group-separator={\,},group-minimum-digits=4}
+
+% --- Pseudocodice e codice ------------------------------------------------
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{listings}
+
+% --- Collegamenti -----------------------------------------------------------
+\usepackage[hidelinks]{hyperref}
+\usepackage[italian,nameinlink]{cleveref}
+
+\graphicspath{{../risultati/grafici/}{immagini/}}
+
+% --- Stile ------------------------------------------------------------------
+\definecolor{codesfondo}{RGB}{246,247,249}
+\definecolor{codebordo}{RGB}{210,214,220}
+\definecolor{commento}{RGB}{90,100,115}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  backgroundcolor=\color{codesfondo},
+  frame=single,
+  rulecolor=\color{codebordo},
+  framesep=4pt,
+  xleftmargin=4pt,
+  xrightmargin=4pt,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  upquote=true,
+  literate={à}{{\`a}}1 {è}{{\`e}}1 {é}{{\'e}}1 {ì}{{\`i}}1 {ò}{{\`o}}1 {ù}{{\`u}}1
+}
+
+\floatname{algorithm}{Algoritmo}
+\crefname{algorithm}{algoritmo}{algoritmi}
+\Crefname{algorithm}{Algoritmo}{Algoritmi}
+\crefname{lstlisting}{listato}{listati}
+\algrenewcommand\algorithmicrequire{\textbf{Ingresso:}}
+\algrenewcommand\algorithmicensure{\textbf{Uscita:}}
+\algnewcommand\algorithmicforeach{\textbf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
+\algnewcommand{\Continue}{\textbf{continue}}
+\algnewcommand{\LineComment}[1]{\State \(\triangleright\) \textit{#1}}
+\algrenewcommand\alglinenumber[1]{\footnotesize #1:}
+
+\newcommand{\dlib}{\operatorname{dlib}}
+\newcommand{\cmin}{\textsc{CamminoMin}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\seq}[1]{\langle #1 \rangle}
+
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parskip}{3pt}
+\setlength{\emergencystretch}{3em}
+\usepackage{etoolbox}
+\makeatletter
+\renewcommand{\@tocrmarg}{2.55em plus1fil}
+\patchcmd{\l@section}{\rightskip \@pnumwidth}{\rightskip \@pnumwidth plus 1fil}{}{}
+\patchcmd{\l@section}{\hfil}{\hfill}{}{}
+\makeatother
+\renewcommand{\arraystretch}{1.15}
+
+\hypersetup{
+  pdftitle={Progetto di Algoritmi e Strutture Dati 2024/25},
+  pdfauthor={Ergys Perdeda},
+  pdfsubject={CamminoMin su griglie 8-connesse}
+}
+
+\begin{document}
+
+% --- Intestazione e indice -------------------------------------------------
+\begin{center}
+  {\LARGE\bfseries Progetto di Algoritmi e Strutture Dati\par}
+  \vspace{4pt}
+  {\large Cammini minimi su griglie 8-connesse con l'algoritmo \cmin\par}
+  \vspace{10pt}
+  {\normalsize Ergys Perdeda --- progetto svolto singolarmente\par}
+  \vspace{2pt}
+  {\small Università degli Studi di Brescia, A.A.\ 2024/2025\par}
+\end{center}
+\vspace{6pt}
+
+\begin{multicols}{2}
+\small\hyphenpenalty=10000
+\tableofcontents
+\end{multicols}
+\clearpage
+
+% Ogni sezione inizia su una pagina nuova
+\input{sezioni/01-introduzione}\clearpage
+\input{sezioni/02-compito-uno}\clearpage
+\input{sezioni/03-compito-due}\clearpage
+\input{sezioni/04-compito-tre}\clearpage
+\input{sezioni/05-compito-quattro}\clearpage
+\input{sezioni/06-conclusioni}\clearpage
+\input{sezioni/07-utilizzo}\clearpage
+
+\appendix
+\input{sezioni/A-formato-output}
+
+\clearpage
+\begin{thebibliography}{9}
+\bibitem{traccia}
+M.~Zanella, \emph{Progetto di Algoritmi e Strutture Dati, A.A.\ 2024/25}, testo dell'elaborato, Università degli Studi di Brescia.
+
+\bibitem{dijkstra}
+E.~W.~Dijkstra, \emph{A note on two problems in connexion with graphs}, Numerische Mathematik, 1:269--271, 1959.
+
+\bibitem{clrs}
+T.~H.~Cormen, C.~E.~Leiserson, R.~L.~Rivest, C.~Stein, \emph{Introduction to Algorithms}, 4\textsuperscript{a} ed., MIT Press, 2022.
+
+\bibitem{random}
+Oracle, \emph{Java SE 17 API: \code{java.util.Random}},
+\url{https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Random.html}.
+
+\bibitem{bitset}
+Oracle, \emph{Java SE 17 API: \code{java.util.BitSet}},
+\url{https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/BitSet.html}.
+\end{thebibliography}
+
+\end{document}

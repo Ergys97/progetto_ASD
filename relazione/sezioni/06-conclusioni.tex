@@ -1,0 +1,83 @@
+\section{Conclusioni}
+\label{sec:conclusioni}
+
+Il progetto realizza i quattro compiti nella versione per una persona. Il
+generatore produce griglie casuali riproducibili e le salva in JSON. Il
+calcolo della chiusura determina contesto, complemento e frontiera in una
+sola passata di costo lineare nel numero di celle ed è disponibile anche da
+riga di comando. \cmin{} restituisce la lunghezza del cammino minimo e la
+sequenza dei landmark, oppure lunghezza infinita e sequenza vuota. La
+correttezza è sostenuta dalla verifica di simmetria su tutte le esecuzioni,
+dal confronto con Dijkstra di tutte le varianti su griglie casuali e su
+griglie costruite per forzare ricorsioni profonde, e dall'enumerazione
+completa delle griglie $3\times3$ per la chiusura.
+
+La sperimentazione mostra che il tempo di \cmin{} è spiegato quasi del tutto
+dal lavoro stimato, cioè dalle chiusure calcolate moltiplicate per le celle
+della griglia. Il numero di chiusure dipende dalla densità e dalla
+disposizione degli ostacoli più che dalla dimensione: senza ostacoli
+l'algoritmo risolve griglie $100\times100$ in poche decine di millisecondi.
+Fra le ottimizzazioni, l'ordinamento della frontiera è indispensabile e la
+cache conta sulle istanze difficili. Il limite propagato riduce le chiamate
+del piano da \num{152548} a \num{3988} e porta le coppie completate entro
+10 s da 46 a 73 su 108, senza cambiare alcuna lunghezza; la crescita resta
+però combinatoria, e a $100\times100$ dal 10\% di ostacoli in su nessuna
+coppia termina entro il limite di tempo.
+
+\subsection{Limitazioni}
+
+\begin{itemize}
+  \item \textbf{Crescita combinatoria.} Il numero di chiamate non ha un
+        limite polinomiale. Con 10 s e 1 GB per verso, la variante
+        \code{base} è affidabile solo fino a $20\times20$ per tutte le
+        densità provate e fino a $40\times40$ con il 5\% di ostacoli; il
+        limite propagato estende la zona affidabile a $30\times30$ per tutte
+        le densità (\cref{sec:limiti-scala}). Il piano principale resta
+        dentro questa zona e non va letto come rappresentativo di griglie
+        grandi e dense.
+  \item \textbf{Costo lineare per chiusura.} Il calcolo della chiusura
+        scandisce sempre l'intera griglia, anche quando la chiusura contiene
+        poche celle.
+  \item \textbf{Memoria della cache.} La cache conserva un elemento per ogni
+        sottoproblema risolto, anche quando i sottoproblemi identici sono
+        rari: nel caso più costoso della variante \code{base} le chiamate
+        servite dalla cache sono il 13\% del totale.
+  \item \textbf{Variante senza ordinamento.} Nel piano è eseguita solo sulle
+        griglie più facili, perché sulle altre richiede da secondi a decine
+        di secondi per esecuzione; il suo costo sulle istanze difficili è
+        quindi documentato solo in modo qualitativo.
+  \item \textbf{Misure dei tempi.} Il piano usa un passaggio di
+        riscaldamento, un riscaldamento per esecuzione e cinque ripetizioni,
+        senza un framework come JMH; il CSV conserva minimo, mediana e
+        massimo ma non le misure grezze. Le tre coppie di una stessa griglia
+        non sono osservazioni indipendenti, quindi correlazioni e regressioni
+        descrivono il piano e non permettono inferenze generali.
+  \item \textbf{Stima della memoria.} Il campo \code{memEst} conta solo le
+        matrici di chiusura; il picco di heap della serie sui limiti di scala
+        è un limite superiore, non una misura esatta.
+  \item \textbf{Ambiente.} Il codice è compilato per Java 17 ma è stato
+        eseguito solo su JDK 21.
+\end{itemize}
+
+\subsection{Sviluppi futuri}
+
+\begin{itemize}
+  \item \textbf{Chiusura incrementale.} Limitare il calcolo alla regione
+        effettivamente raggiunta, invece di scandire tutta la griglia,
+        renderebbe il costo di una chiamata proporzionale alla chiusura
+        invece che alla griglia; per la \cref{eq:tempo} è il fattore $n$ del
+        lavoro stimato.
+  \item \textbf{Cache con politica di rimozione.} Limitare la cache ai
+        sottoproblemi riusati più spesso ridurrebbe la memoria sulle istanze
+        con pochi riusi.
+  \item \textbf{Uscita anticipata dal ciclo.} Con la frontiera ordinata per
+        limite inferiore, la prima cella che viola la condizione della riga
+        17 implica che la violano anche le successive: il ciclo potrebbe
+        terminare lì. I rami potati non ricorrono già, quindi il guadagno
+        sarebbe limitato al costo del ciclo.
+  \item \textbf{Misure più robuste.} Benchmark con JMH, più ripetizioni,
+        salvataggio delle misure grezze ed esecuzione anche su JDK 17.
+  \item \textbf{Ricostruzione del percorso.} La sequenza delle mosse si
+        ottiene percorrendo il cammino libero di ogni tratto fra landmark;
+        il requisito appartiene alla versione per tre persone.
+\end{itemize}

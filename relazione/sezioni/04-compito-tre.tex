@@ -1,0 +1,319 @@
+\section{Compito Tre: l'algoritmo CamminoMin}
+\label{sec:compito3}
+
+\subsection{Idea e pseudocodice di riferimento}
+
+Se $D$ appartiene alla chiusura di $O$, un cammino minimo è il cammino libero
+fra le due celle e la sua lunghezza è $\dlib(O,D)$. Altrimenti, qualunque
+cammino da $O$ a $D$ esce dalla chiusura di $O$ passando per una cella della
+sua frontiera. La traccia definisce quindi ricorsivamente il cammino minimo
+come il più corto fra i cammini ottenuti componendo il cammino libero da $O$
+a una cella di frontiera $F$ con un cammino minimo da $F$ a $D$, al variare di
+$F$ nella frontiera. Nella chiamata su $F$ le celle della chiusura di $O$
+sono trattate come ostacoli, così il cammino non ripassa da una regione già
+coperta.
+
+L'\cref{alg:traccia} riporta lo pseudocodice della traccia (pag.~30); la
+numerazione delle righe è quella usata nel resto della relazione.
+
+\begin{algorithm}[H]
+\caption{\cmin{} come definito nella traccia~\cite{traccia}}
+\label{alg:traccia}
+\begin{algorithmic}[1]
+\Procedure{CamminoMin}{$O, D, \mathit{dim}, \mathit{osta}$}
+  \LineComment{$\mathit{dim}$: dimensioni della griglia; $\mathit{osta}$: celle non attraversabili}
+  \State $\mathit{contesto} \gets \Call{CalcolaContesto}{O, \mathit{dim}, \mathit{osta}}$
+  \If{$D \in \mathit{contesto}$}
+    \State \Return $\dlib(O,D), \seq{(O,0), (D,1)}$
+  \EndIf
+  \State $\mathit{complemento} \gets \Call{CalcolaComplemento}{O, \mathit{dim}, \mathit{osta}}$
+  \If{$D \in \mathit{complemento}$}
+    \State \Return $\dlib(O,D), \seq{(O,0), (D,2)}$
+  \EndIf
+  \State $\mathit{frontiera} \gets \Call{CalcolaFrontiera}{\mathit{contesto}, \mathit{complemento}, \mathit{dim}, \mathit{osta}}$
+  \If{$\mathit{frontiera} = \emptyset$} \Comment{vicolo cieco}
+    \State \Return $\infty, \seq{}$
+  \EndIf
+  \State $\mathit{lunghezzaMin} \gets \infty$
+  \State $\mathit{seqMin} \gets \seq{}$
+  \ForEach{$(F,t) \in \mathit{frontiera}$}
+    \State $\mathit{lF} \gets \dlib(O,F)$
+    \If{$\mathit{lF} < \mathit{lunghezzaMin}$}
+      \LineComment{una condizione più forte è $\mathit{lF} + \dlib(F,D) < \mathit{lunghezzaMin}$}
+      \State $\mathit{lFD}, \mathit{seqFD} \gets \Call{CamminoMin}{F, D, \mathit{dim}, \mathit{osta} \cup \mathit{contesto} \cup \mathit{complemento}}$
+      \State $\mathit{lTot} \gets \mathit{lF} + \mathit{lFD}$
+      \If{$\mathit{lTot} < \mathit{lunghezzaMin}$}
+        \State $\mathit{lunghezzaMin} \gets \mathit{lTot}$
+        \State $\mathit{seqMin} \gets \Call{Compatta}{\seq{(O,0),(F,t)}, \mathit{seqFD}}$
+      \EndIf
+    \EndIf
+  \EndFor
+  \State \Return $\mathit{lunghezzaMin}, \mathit{seqMin}$
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Implementazione}
+\label{sec:implementazione-cmin}
+
+La classe \code{CamminoMin} implementa l'\cref{alg:impl}. Il metodo
+pubblico \code{calcola(griglia, O, D)} restituisce un
+\code{Cammino}, formato dalla lunghezza (\code{DistanzaLibera}) e dalla lista
+dei landmark. Due sovraccarichi ricevono anche un oggetto
+\code{StatisticheEsecuzione}, in cui accumulare i contatori del riassunto, e la
+variante dell'algoritmo da eseguire (\cref{sec:varianti}); senza indicazioni
+si usa la variante \code{base}.
+
+\begin{algorithm}[tbp]
+\caption{\cmin{} come implementato in \code{CamminoMin}}
+\label{alg:impl}
+\begin{algorithmic}[1]
+\Require griglia $g$, celle attraversabili $O$ e $D$, limite $L$ ($\infty$ nella chiamata principale), tabella $\mathit{cache}$ (vuota alla prima chiamata)
+\Ensure lunghezza del cammino minimo da $O$ a $D$ e sequenza dei landmark, oppure $(\infty, \seq{})$ se non esiste un cammino più corto di $L$
+\Function{CamminoMin}{$g, O, D, L$}
+  \State $k \gets \Call{Chiave}{\text{ostacoli di } g, O, D}$
+  \If{$\mathit{cache}[k]$ è esatto, o esclude cammini più corti di un $L' \ge L$}
+    \State \Return $\mathit{cache}[k]$ \Comment{$(\infty, \seq{})$ nel secondo caso}
+  \EndIf
+  \State $s, \mathit{chiusura}, \mathit{frontiera} \gets \Call{CalcolaChiusura}{g, O}$ \Comment{\cref{alg:chiusura}}
+  \If{$s[D]$ contiene \code{CHIUSURA}} \Comment{righe 4--8, anche $O = D$}
+    \State $r \gets \bigl(\dlib(O,D), \seq{(O,0), (D, \Call{Tipo}{s[D]})}\bigr)$
+    \State $\mathit{cache}[k] \gets r$ (esatto); \quad \Return $r$
+  \EndIf
+  \State $\mathit{lunghezzaMin} \gets L$; \quad $\mathit{seqMin} \gets \seq{}$
+  \State ordina $\mathit{frontiera}$ per $\dlib(O,F) + \dlib(F,D)$ crescente
+  \ForEach{$F \in \mathit{frontiera}$}
+    \State $\mathit{lF} \gets \dlib(O,F)$
+    \If{$\mathit{lF} \ge \mathit{lunghezzaMin}$} \Continue \Comment{riga 16 falsa}
+    \EndIf
+    \If{$\mathit{lF} + \dlib(F,D) \ge \mathit{lunghezzaMin}$} \Continue \Comment{riga 17 falsa}
+    \EndIf
+    \State $g' \gets g$ con le celle di $\mathit{chiusura} \setminus \{F\}$ come ostacoli
+    \State $L' \gets \mathit{lunghezzaMin} - \mathit{lF}$ se il limite è propagato, altrimenti $\infty$
+    \State $\mathit{lFD}, \mathit{seqFD} \gets \Call{CamminoMin}{g', F, D, L'}$
+    \If{$\mathit{lF} + \mathit{lFD} < \mathit{lunghezzaMin}$}
+      \State $\mathit{lunghezzaMin} \gets \mathit{lF} + \mathit{lFD}$
+      \State $\mathit{seqMin} \gets \seq{(O,0), (F, \Call{Tipo}{s[F]})} \cdot \mathit{seqFD}[2..]$ \Comment{\textsc{Compatta}}
+    \EndIf
+  \EndFor
+  \If{$\mathit{seqMin} = \seq{}$} \Comment{nessun cammino più corto di $L$}
+    \State $\mathit{cache}[k] \gets$ ``nessun cammino più corto di $L$''; \quad \Return $(\infty, \seq{})$
+  \EndIf
+  \State $\mathit{cache}[k] \gets (\mathit{lunghezzaMin}, \mathit{seqMin})$ (esatto)
+  \State \Return $\mathit{lunghezzaMin}, \mathit{seqMin}$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Senza limite propagato $L$ vale sempre $\infty$ e l'algoritmo coincide con la
+versione della traccia arricchita da ordinamento, riga~17 e cache.
+
+La \cref{tab:corrispondenza} collega le righe della traccia
+all'implementazione. La traccia ammette una codifica diversa dallo
+pseudocodice purché produca gli stessi effetti (pag.~34--35).
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Righe della traccia} & \textbf{Implementazione} \\
+\midrule
+3, 6, 9  & Un'unica chiamata a \code{CalcoloChiusura} produce contesto,
+           complemento, frontiera e tipo di ogni cella (\cref{sec:chiusura}). \\
+4--8     & Il caso base controlla la maschera \code{CHIUSURA} nello stato di
+           $D$; il tipo di $D$ è $1$ se ha il bit \code{CONTESTO}, $2$
+           altrimenti. Se $O = D$, $O$ è nel proprio contesto e il risultato è
+           $\bigl(0, \seq{(O,0),(O,1)}\bigr)$, come richiesto a pag.~32. \\
+10--11   & Con frontiera vuota il ciclo non esegue iterazioni e la funzione
+           restituisce $(\infty, \seq{})$, cioè lo stesso risultato. \\
+12--13   & $\mathit{lunghezzaMin}$ parte da $\infty$, oppure dal limite
+           ricevuto se il limite è propagato (\cref{sec:ottimizzazioni}). \\
+14       & La frontiera è visitata in ordine di limite inferiore crescente.
+           $O$ non è mai di frontiera: i suoi vicini attraversabili sono le
+           prime celle delle linee primarie e appartengono al contesto. \\
+16--17   & La condizione della riga 16 è controllata per prima, poi quella
+           più forte suggerita alla riga 17. I due esiti negativi sono
+           contati separatamente (\cref{sec:contatori}). \\
+18       & Gli ostacoli della chiamata ricorsiva sono quelli di $g$ più la
+           chiusura di $O$ tranne $F$ (\cref{sec:ostacoli-annidati}). \\
+20--22   & Il confronto è stretto: a parità di lunghezza resta il primo
+           cammino trovato. \textsc{Compatta} sostituisce il primo landmark
+           $(F,0)$ di $\mathit{seqFD}$ con $(F,t)$. \\
+\bottomrule
+\end{tabularx}
+\caption{Corrispondenza fra lo pseudocodice della traccia e l'implementazione.}
+\label{tab:corrispondenza}
+\end{table}
+
+\subsection{Ostacoli nelle chiamate annidate}
+\label{sec:ostacoli-annidati}
+
+Secondo la traccia (pag.~28 e 32), nella chiamata su $F$ tutte le celle della
+chiusura di $O$ diventano ostacoli, compresa $F$, che però resta l'origine
+della nuova chiusura. L'implementazione ottiene lo stesso effetto escludendo
+$F$ dall'insieme di ostacoli aggiunti: le celle raggiungibili da $F$ sono le
+stesse, e \code{CalcoloChiusura} non deve gestire un'origine marcata come
+ostacolo. La nuova griglia $g'$ è una vista immutabile
+(\cref{sec:immutabilita}): ogni ramo ricorsivo accumula i propri ostacoli
+senza modificare la griglia dei rami fratelli.
+
+\subsection{Sequenza dei landmark}
+
+La sequenza dei landmark $\seq{(O,0), (F_1,t_1), \dots, (D,t_D)}$ elenca
+l'origine e le celle di frontiera attraversate dal cammino; il tipo di un
+landmark è quello del cammino libero che lo raggiunge dal landmark
+precedente, quindi la sequenza descrive il cammino in modo univoco.
+Nell'implementazione un landmark è un record con le coordinate e il tipo
+$t \in \{0, 1, 2\}$; il tipo $0$ identifica l'origine della chiamata. La
+lista dei landmark di un \code{Cammino} è immutabile. Se $D$ è
+irraggiungibile il risultato è la lunghezza infinita con la sequenza vuota.
+
+Nell'esempio della \cref{fig:esempio}(b) la chiamata da $O=(0,0)$ restituisce
+$\seq{(O,0), ((8,7),1), (D,1)}$. La chiamata nel verso opposto, da
+$(10,10)$ a $(0,0)$, restituisce
+$\seq{((10,10),0), ((0,1),2), ((0,0),1)}$: un cammino diverso, ma della stessa
+lunghezza $9\sqrt{2}+2$. In entrambi i casi la somma delle distanze libere
+fra landmark consecutivi è uguale alla lunghezza del cammino; i test
+verificano questa proprietà su tutti i risultati finiti.
+
+\subsection{Ottimizzazioni}
+\label{sec:ottimizzazioni}
+
+Le ottimizzazioni riducono il numero di chiamate ricorsive senza cambiare la
+lunghezza restituita; il loro effetto è misurato nella \cref{sec:ablation}.
+
+\paragraph{Ordinamento della frontiera.} Le celle di frontiera sono visitate
+in ordine crescente di $\dlib(O,F) + \dlib(F,D)$, un limite inferiore della
+lunghezza di qualunque cammino da $O$ a $D$ che passi per $F$. I candidati
+più promettenti vengono esplorati per primi, $\mathit{lunghezzaMin}$ scende
+presto e le condizioni di potatura scartano più rami. L'ordinamento costa
+$O(f \log f)$, con $f$ numero di celle di frontiera; le due distanze libere di
+ogni candidato sono calcolate una volta sola e riusate dalla potatura.
+
+\paragraph{Condizione della riga 17.} Dopo la riga 16 viene controllata la
+condizione più forte $\mathit{lF} + \dlib(F,D) < \mathit{lunghezzaMin}$. La
+potatura è corretta perché $\dlib(F,D)$ non supera la lunghezza di nessun
+cammino da $F$ a $D$: se la condizione è falsa, passare per $F$ non può dare
+un cammino strettamente più corto di quello già trovato. Il confronto
+sperimentale fra le due condizioni, facoltativo per i gruppi di tre persone
+(pag.~67), non fa parte di questo progetto.
+
+\paragraph{Memoizzazione.} Il risultato di una chiamata dipende dagli
+ostacoli della griglia, da $O$, da $D$ e, con il limite propagato, dal limite
+ricevuto. Il risultato viene salvato in una \code{HashMap} la cui chiave è
+formata dal \code{BitSet} degli ostacoli della vista (\cref{sec:immutabilita})
+e dalle coordinate di $O$ e $D$: la chiave occupa $n/8$ byte e
+\code{equals} e \code{hashCode} costano $O(n/64)$. La chiave è esatta, perché
+un hash intero degli ostacoli potrebbe collidere e restituire il risultato di
+un altro sottoproblema. Una prima versione usava una stringa con le
+coordinate di tutti gli ostacoli: chiavi equivalenti, ma costruite con una
+scansione della griglia e lunghe decine di caratteri per ostacolo. Le
+direzioni $O \to D$ e $D \to O$ usano tabelle separate, così la verifica di
+simmetria confronta due calcoli indipendenti.
+
+\paragraph{Limite propagato.} Nella versione della traccia ogni chiamata
+annidata cerca il cammino minimo da $F$ a $D$ partendo da
+$\mathit{lunghezzaMin} = \infty$, anche quando il chiamante ha già un cammino
+di lunghezza $\mathit{lunghezzaMin}$ e gli serve soltanto sapere se ne esiste
+uno più corto di $\mathit{lunghezzaMin} - \dlib(O,F)$. La variante con limite
+propagato passa questo valore $L'$ alla chiamata annidata, che inizializza
+con esso il proprio $\mathit{lunghezzaMin}$: le righe 16 e 17 potano così
+anche all'interno della ricorsione. Una chiamata con limite $L$ restituisce
+il cammino minimo del sottoproblema se è più corto di $L$, altrimenti
+$(\infty, \seq{})$. Il risultato resta corretto: un cammino trovato sotto il
+limite viene confrontato con tutti i candidati che potrebbero batterlo, ed è
+quindi il minimo; un ramo che non trova nulla sotto il limite non può
+migliorare il cammino del chiamante. La cache distingue i due casi: un
+risultato trovato è esatto e vale per qualunque limite; un risultato vuoto
+significa soltanto ``nessun cammino più corto di $L$'' e viene riusato solo
+per chiamate con limite non superiore a $L$.
+
+\paragraph{Viste immutabili.} La griglia $g'$ della chiamata ricorsiva
+richiede la copia di un \code{BitSet} di $n$ bit e l'inserimento delle celle
+della chiusura, invece della copia di una matrice di $n$ interi.
+
+\subsection{Varianti}
+\label{sec:varianti}
+
+L'enumerazione \code{VarianteCamminoMin} attiva o disattiva le
+ottimizzazioni, per confrontarle nella sperimentazione
+(\cref{tab:varianti}). La riga~17 è attiva in tutte le varianti. La variante
+si sceglie da riga di comando con \code{-{}-variante}.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{@{}l c c c@{}}
+\toprule
+\textbf{Variante} & \textbf{Cache} & \textbf{Ordinamento} & \textbf{Limite propagato} \\
+\midrule
+\code{base}              & sì & sì & no \\
+\code{senza-cache}       & no & sì & no \\
+\code{senza-ordinamento} & sì & no, ordine di scansione della griglia & no \\
+\code{limite-propagato}  & sì & sì & sì \\
+\bottomrule
+\end{tabular}
+\caption{Varianti di \cmin{}. Tutte restituiscono la stessa lunghezza minima.}
+\label{tab:varianti}
+\end{table}
+
+\subsection{Contatori e riassunto}
+\label{sec:contatori}
+
+La traccia chiede, per ogni istanza e su richiesta dell'utente, un riassunto
+con dimensioni e tipo della griglia, numero totale di celle di frontiera,
+numero di volte in cui la condizione della riga 16/17 è risultata falsa e
+prestazioni (pag.~71). \code{StatisticheEsecuzione} raccoglie i contatori
+della \cref{tab:contatori} durante l'esecuzione. Un'istanza comprende sempre
+entrambe le direzioni $O \to D$ e $D \to O$; i contatori sommano le due
+direzioni e tutte le chiamate ricorsive.
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{Campo} & \textbf{Significato} \\
+\midrule
+\code{front}         & celle di frontiera di tutte le chiusure calcolate
+                       (le chiamate servite dalla cache non calcolano chiusure) \\
+\code{r16False}      & volte in cui la condizione della riga 16 è risultata falsa \\
+\code{r17Prune}      & volte in cui la riga 16 era vera ma la condizione più forte
+                       della riga 17 era falsa \\
+\code{pruneTot}      & somma dei due precedenti: volte in cui la condizione
+                       effettivamente usata è risultata falsa e il ramo è stato potato \\
+\code{variante}      & variante di \cmin{} eseguita (\cref{tab:varianti}) \\
+\code{chiamate}      & invocazioni di \cmin{}, comprese quelle servite dalla cache \\
+\code{cacheHit}      & invocazioni servite dalla cache, che non calcolano una chiusura \\
+\code{prof}          & profondità massima della ricorsione \\
+\code{chiusurePicco} & massimo numero di matrici di chiusura presenti
+                       contemporaneamente in memoria \\
+\code{memEst}        & stima della memoria di tali matrici:
+                       $\code{chiusurePicco} \cdot 4n$ byte \\
+\code{tempoNs}       & tempo minimo, mediano e massimo delle ripetizioni (\cref{sec:protocollo}) \\
+\code{seqOD}, \code{seqDO} & sequenze dei landmark nei due versi \\
+\bottomrule
+\end{tabularx}
+\caption{Contatori del riassunto. L'elenco completo delle colonne del CSV è
+nell'\cref{app:formato}.}
+\label{tab:contatori}
+\end{table}
+
+Poiché $\dlib(F,D) \ge 0$, quando la condizione della riga 16 è falsa lo è
+anche quella della riga 17. \code{pruneTot} conta quindi le volte in cui la
+condizione della riga 17 è risultata falsa, e \code{r16False} quante di
+queste sarebbero state potate anche dalla sola riga 16. La profondità e le
+chiusure presenti in memoria possono differire: una chiamata servita dalla
+cache aumenta la profondità ma non alloca una nuova matrice.
+
+Il riassunto viene stampato su una riga per istanza e variante, con le
+lunghezze arrotondate a quattro decimali; nel piano sperimentale i riassunti
+sono salvati anche in \code{risultati/riassunti.txt}. Per un'istanza singola
+l'opzione \code{-{}-summary false} omette la stampa, mentre il CSV contiene
+sempre tutti i campi, con sei decimali. Il riassunto dell'istanza della \cref{fig:esempio} nel piano
+sperimentale è:
+
+\begin{lstlisting}
+[G12x12_d10_s50_p1] variante=base | tipo=Casuale | 12x12 | ost=15 | O=(0,0)->D=(10,10) | OD=14.7279 | DO=14.7279 | corr=true | front=118 | r16False=1 | r17Prune=96 | pruneTot=97 | chiamate=18 | cacheHit=2 | prof=4 | chiusurePicco=4 | memEst=2304B | tempoNs[min/med/max]=180900/184000/218900 | warmup=1 | rip=5 | seqOD=[(x=0,y=0,tipo=0), (x=8,y=7,tipo=1), (x=10,y=10,tipo=1)] | seqDO=[(x=10,y=10,tipo=0), (x=0,y=1,tipo=2), (x=0,y=0,tipo=1)]
+\end{lstlisting}
