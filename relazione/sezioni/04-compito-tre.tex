@@ -71,8 +71,8 @@ si usa la variante \code{base}.
 \Require griglia $g$, celle attraversabili $O$ e $D$, limite $L$ ($\infty$ nella chiamata principale), tabella $\mathit{cache}$ (vuota alla prima chiamata)
 \Ensure lunghezza del cammino minimo da $O$ a $D$ e sequenza dei landmark, oppure $(\infty, \seq{})$ se non esiste un cammino più corto di $L$
 \Function{CamminoMin}{$g, O, D, L$}
-  \State $k \gets \Call{Chiave}{\text{ostacoli di } g, O, D}$
-  \If{$\mathit{cache}[k]$ è esatto, o esclude cammini più corti di un $L' \ge L$}
+  \State $k \gets \Call{Chiave}{\text{ostacoli di } g, O, D}$ \Comment{se la cache è attiva}
+  \If{$\mathit{cache}[k]$ è esatto, o esclude cammini più corti di un limite $\ge L$}
     \State \Return $\mathit{cache}[k]$ \Comment{$(\infty, \seq{})$ nel secondo caso}
   \EndIf
   \State $s, \mathit{chiusura}, \mathit{frontiera} \gets \Call{CalcolaChiusura}{g, O}$ \Comment{\cref{alg:chiusura}}
@@ -81,7 +81,7 @@ si usa la variante \code{base}.
     \State $\mathit{cache}[k] \gets r$ (esatto); \quad \Return $r$
   \EndIf
   \State $\mathit{lunghezzaMin} \gets L$; \quad $\mathit{seqMin} \gets \seq{}$
-  \State ordina $\mathit{frontiera}$ per $\dlib(O,F) + \dlib(F,D)$ crescente
+  \State ordina $\mathit{frontiera}$ per $\dlib(O,F) + \dlib(F,D)$ crescente \Comment{tranne \code{senza-ordinamento}}
   \ForEach{$F \in \mathit{frontiera}$}
     \State $\mathit{lF} \gets \dlib(O,F)$
     \If{$\mathit{lF} \ge \mathit{lunghezzaMin}$} \Continue \Comment{riga 16 falsa}
@@ -129,7 +129,8 @@ pseudocodice purché produca gli stessi effetti (pag.~34--35).
            restituisce $(\infty, \seq{})$, cioè lo stesso risultato. \\
 12--13   & $\mathit{lunghezzaMin}$ parte da $\infty$, oppure dal limite
            ricevuto se il limite è propagato (\cref{sec:ottimizzazioni}). \\
-14       & La frontiera è visitata in ordine di limite inferiore crescente.
+14       & La frontiera è visitata in ordine di limite inferiore crescente
+           (ordine di scansione nella variante \code{senza-ordinamento}).
            $O$ non è mai di frontiera: i suoi vicini attraversabili sono le
            prime celle delle linee primarie e appartengono al contesto. \\
 16--17   & La condizione della riga 16 è controllata per prima, poi quella
@@ -174,8 +175,10 @@ $\seq{(O,0), ((8,7),1), (D,1)}$. La chiamata nel verso opposto, da
 $(10,10)$ a $(0,0)$, restituisce
 $\seq{((10,10),0), ((0,1),2), ((0,0),1)}$: un cammino diverso, ma della stessa
 lunghezza $9\sqrt{2}+2$. In entrambi i casi la somma delle distanze libere
-fra landmark consecutivi è uguale alla lunghezza del cammino; i test
-verificano questa proprietà su tutti i risultati finiti.
+fra landmark consecutivi è uguale alla lunghezza del cammino; i test di
+confronto con Dijkstra (\cref{sec:verifica-cmin}) verificano questa proprietà
+su ogni cammino finito, insieme al fatto che ogni tratto sia realizzabile come
+cammino libero.
 
 \subsection{Ottimizzazioni}
 \label{sec:ottimizzazioni}
@@ -206,9 +209,9 @@ formata dal \code{BitSet} degli ostacoli della vista (\cref{sec:immutabilita})
 e dalle coordinate di $O$ e $D$: la chiave occupa $n/8$ byte e
 \code{equals} e \code{hashCode} costano $O(n/64)$. La chiave è esatta, perché
 un hash intero degli ostacoli potrebbe collidere e restituire il risultato di
-un altro sottoproblema. Una prima versione usava una stringa con le
-coordinate di tutti gli ostacoli: chiavi equivalenti, ma costruite con una
-scansione della griglia e lunghe decine di caratteri per ostacolo. Le
+un altro sottoproblema. Una stringa con le coordinate di tutti gli ostacoli
+darebbe chiavi equivalenti, ma richiederebbe una scansione della griglia e
+decine di caratteri per ostacolo. Le
 direzioni $O \to D$ e $D \to O$ usano tabelle separate, così la verifica di
 simmetria confronta due calcoli indipendenti.
 
@@ -287,8 +290,8 @@ direzioni e tutte le chiamate ricorsive.
 \code{chiamate}      & invocazioni di \cmin{}, comprese quelle servite dalla cache \\
 \code{cacheHit}      & invocazioni servite dalla cache, che non calcolano una chiusura \\
 \code{prof}          & profondità massima della ricorsione \\
-\code{chiusurePicco} & massimo numero di matrici di chiusura presenti
-                       contemporaneamente in memoria \\
+\code{chiusurePicco} & massimo numero di matrici di chiusura attive
+                       contemporaneamente lungo la pila delle chiamate \\
 \code{memEst}        & stima della memoria di tali matrici:
                        $\code{chiusurePicco} \cdot 4n$ byte \\
 \code{tempoNs}       & tempo minimo, mediano e massimo delle ripetizioni (\cref{sec:protocollo}) \\
@@ -304,16 +307,20 @@ Poiché $\dlib(F,D) \ge 0$, quando la condizione della riga 16 è falsa lo è
 anche quella della riga 17. \code{pruneTot} conta quindi le volte in cui la
 condizione della riga 17 è risultata falsa, e \code{r16False} quante di
 queste sarebbero state potate anche dalla sola riga 16. La profondità e le
-chiusure presenti in memoria possono differire: una chiamata servita dalla
+chiusure attive possono differire: una chiamata servita dalla
 cache aumenta la profondità ma non alloca una nuova matrice.
 
-Il riassunto viene stampato su una riga per istanza e variante, con le
-lunghezze arrotondate a quattro decimali; nel piano sperimentale i riassunti
-sono salvati anche in \code{risultati/riassunti.txt}. Per un'istanza singola
-l'opzione \code{-{}-summary false} omette la stampa, mentre il CSV contiene
-sempre tutti i campi, con sei decimali. Il riassunto dell'istanza della \cref{fig:esempio} nel piano
-sperimentale è:
+Il riassunto è stampato su una riga per istanza e variante, con le lunghezze
+arrotondate a quattro decimali (il CSV le conserva con sei); nel piano è
+salvato anche in \code{risultati/riassunti.txt}. Quello dell'istanza della
+\cref{fig:esempio}, qui spezzato ai separatori per leggibilità, è:
 
 \begin{lstlisting}
-[G12x12_d10_s50_p1] variante=base | tipo=Casuale | 12x12 | ost=15 | O=(0,0)->D=(10,10) | OD=14.7279 | DO=14.7279 | corr=true | front=118 | r16False=1 | r17Prune=96 | pruneTot=97 | chiamate=18 | cacheHit=2 | prof=4 | chiusurePicco=4 | memEst=2304B | tempoNs[min/med/max]=180900/184000/218900 | warmup=1 | rip=5 | seqOD=[(x=0,y=0,tipo=0), (x=8,y=7,tipo=1), (x=10,y=10,tipo=1)] | seqDO=[(x=10,y=10,tipo=0), (x=0,y=1,tipo=2), (x=0,y=0,tipo=1)]
+[G12x12_d10_s50_p1] variante=base | tipo=Casuale | 12x12 | ost=15
+  | O=(0,0)->D=(10,10) | OD=14.7279 | DO=14.7279 | corr=true
+  | front=118 | r16False=1 | r17Prune=96 | pruneTot=97
+  | chiamate=18 | cacheHit=2 | prof=4 | chiusurePicco=4 | memEst=2304B
+  | tempoNs[min/med/max]=180900/184000/218900 | warmup=1 | rip=5
+  | seqOD=[(x=0,y=0,tipo=0), (x=8,y=7,tipo=1), (x=10,y=10,tipo=1)]
+  | seqDO=[(x=10,y=10,tipo=0), (x=0,y=1,tipo=2), (x=0,y=0,tipo=1)]
 \end{lstlisting}

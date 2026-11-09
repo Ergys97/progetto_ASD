@@ -36,12 +36,14 @@ si ottiene ugualmente con una sola invocazione per verso.
 \paragraph{Caso peggiore.} Ogni chiamata annidata aggiunge agli ostacoli
 almeno la cella da cui parte la chiusura precedente, quindi lungo un ramo il
 numero di celle libere diminuisce strettamente e $l \le n$. Ogni invocazione
-ha al più $f_i \le n$ figli. Il numero di invocazioni è quindi limitato solo
-da una quantità esponenziale, dell'ordine di $n^{l}$: non esiste un limite
-polinomiale in $n$. Ordinamento della frontiera, potatura, cache e limite
-propagato riducono $C$ in pratica ma non cambiano il caso peggiore. Nel piano
-$C$ arriva a \num{102202} su una griglia di 400 celle e nella serie sui
-limiti di scala a \num{508161} (\cref{sec:limiti-scala}).
+ha al più $f_i \le n$ figli. Il numero di invocazioni è quindi limitato da
+una quantità esponenziale, dell'ordine di $n^{l}$; questa analisi non fornisce
+un limite polinomiale in $n$, e la sperimentazione mostra una crescita
+combinatoria. Ordinamento della frontiera, potatura, cache e limite
+propagato riducono $C$ in pratica ma non cambiano il caso peggiore. Nel piano,
+con la variante \code{base}, $C$ arriva a \num{102202} su una griglia di 400
+celle (\num{435793} senza cache) e nella serie sui limiti di scala a
+\num{508161} (\cref{sec:limiti-scala}).
 
 \paragraph{Spazio.} Ogni invocazione attiva che non è servita dalla cache
 tiene in memoria la propria matrice degli stati ($4n$ byte), la chiusura e
@@ -142,6 +144,7 @@ core, 16 thread) con 31,9 GiB di RAM, Windows 11 Pro e Eclipse Temurin
 compreso il passaggio di riscaldamento, richiede meno di un minuto.
 
 \subsection{Verifica della correttezza}
+\label{sec:verifica-cmin}
 
 \paragraph{Simmetria e coerenza fra varianti.} Per ogni istanza la traccia
 chiede di confrontare le lunghezze calcolate nei due versi. Tutte le 215
@@ -187,7 +190,8 @@ attraversare molti landmark:
 
 \paragraph{Regressione.} Un test fissa i contatori della variante
 \code{base} sull'istanza della \cref{fig:esempio}, un altro verifica che il
-generatore produca le stesse griglie della versione precedente, e un terzo
+generatore produca le stesse griglie di un'implementazione di riferimento
+che aggiunge gli ostacoli uno alla volta, e un terzo
 che il limite propagato riduca le chiamate senza cambiare la lunghezza
 sull'istanza più costosa del piano.
 
@@ -255,14 +259,13 @@ Dalla tabella e dalla \cref{fig:tempo-scenario} emergono tre aspetti.
         \num{0.027} ms a $12\times12$ a \num{0.34} ms a $50\times50$: le
         celle aumentano di 17 volte e il tempo di 13, come atteso da un
         calcolo di chiusura di costo $\Theta(n)$. Il passaggio di
-        riscaldamento ha eliminato l'anomalia della prima versione del piano,
-        in cui la prima griglia misurata risultava più lenta di griglie più
-        grandi.
+        riscaldamento evita che la prima griglia misurata risulti più lenta
+        di griglie più grandi a causa della compilazione JIT.
   \item \textbf{Il costo dipende dalle chiamate più che dalla dimensione.}
         Il gruppo più costoso per la variante \code{base} non è il
         $50\times50$ ma il $20\times20$ con il 20\% di ostacoli, dove una
         singola istanza richiede \num{102202} chiamate e \num{399} ms, circa
-        due terzi del tempo dell'intero piano. Le
+        due terzi del tempo della variante \code{base} sull'intero piano. Le
         istanze di uno stesso gruppo differiscono fino a quattro ordini di
         grandezza, perché la disposizione degli ostacoli e la posizione di
         $O$ e $D$ decidono quanti rami sopravvivono alla potatura.
@@ -324,7 +327,7 @@ condizioni, che richiederebbe di eseguire l'algoritmo con la sola riga 16.
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.75\textwidth]{grafico5_memoria_e_profondita.png}
-  \caption{Memoria stimata delle matrici di chiusura presenti
+  \caption{Memoria stimata delle matrici di chiusura attive
   contemporaneamente, variante \code{base}, rispetto al numero di celle; il
   colore indica il numero di matrici.}
   \label{fig:memoria}
@@ -333,7 +336,7 @@ condizioni, che richiederebbe di eseguire l'algoritmo con la sola riga 16.
 \paragraph{Memoria.} La memoria stimata delle matrici di chiusura
 (\cref{fig:memoria}) non supera mai \num{50000} byte: il massimo corrisponde a
 cinque matrici della griglia $50\times50$. Nell'istanza $20\times20$ più
-costosa la ricorsione raggiunge profondità 25 con 25 matrici presenti
+costosa la ricorsione raggiunge profondità 25 con 25 matrici attive
 insieme, cioè $25 \cdot 400 \cdot 4 = \num{40000}$ byte. Come osservato nella
 \cref{sec:analisi-teorica}, la stima non comprende la cache.
 
@@ -465,12 +468,9 @@ limite propagato le coppie completate sono 73: le stesse 46 più altre 27,
 mentre 34 si sono fermate nel verso $O \to D$ e una nel verso $D \to O$,
 sempre per il limite di tempo. Nessuna esecuzione ha esaurito la memoria.
 Tutte le coppie completate sono simmetriche e, dove entrambe le varianti
-terminano, le lunghezze coincidono. Una seconda esecuzione della serie su
-un'altra macchina (2 vCPU Intel Xeon, Linux, OpenJDK 21.0.12) ha prodotto
-gli stessi esiti, con lunghezze e numero di chiamate identici, tranne una
-coppia del limite propagato ($70\times70$, 5\%, seed 2), che lì ha superato i
-10 s: il confine della \cref{tab:limiti} dipende dall'algoritmo più che
-dall'hardware, salvo le coppie vicine al limite di tempo.
+terminano, le lunghezze coincidono. Numero di chiamate e lunghezze non
+dipendono dalla macchina; su hardware diverso possono cambiare esito solo le
+coppie che terminano vicino ai 10 s.
 
 Dalla serie emergono cinque osservazioni.
 
@@ -508,11 +508,3 @@ Dalla serie emergono cinque osservazioni.
         plausibile è che in un verso si trovi presto un cammino corto, che
         consente di potare molti più rami.
 \end{enumerate}
-
-La chiave della cache come \code{BitSet} (\cref{sec:ottimizzazioni}) è
-visibile nel confronto con la serie precedente, eseguita sulla stessa
-macchina con la chiave testuale: la coppia $20\times20$ al 30\% (seed 1)
-richiedeva \num{5.8} s e un picco di heap di 976 MB, e tre coppie
-$70\times70$ terminavano per esaurimento della memoria. Il numero di
-chiamate è identico, perché le due chiavi identificano gli stessi
-sottoproblemi.

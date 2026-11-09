@@ -21,18 +21,18 @@ adiacenti ad almeno una cella attraversabile esterna alla chiusura.
 \subsection{Distanza libera}
 
 La distanza libera è la lunghezza di un cammino libero, cioè del cammino
-minimo in assenza di ostacoli. Posti $\Delta_x = |x_D - x_O|$ e
-$\Delta_y = |y_D - y_O|$, si calcola in tempo costante:
+minimo in assenza di ostacoli. Posti $\Delta_x = |x_D - x_O|$,
+$\Delta_y = |y_D - y_O|$, $\Delta_{\min} = \min(\Delta_x,\Delta_y)$ e
+$\Delta_{\max} = \max(\Delta_x,\Delta_y)$, si calcola in tempo costante:
 \begin{equation}
-  \dlib(O,D) = \sqrt{2}\,\min(\Delta_x,\Delta_y) + \bigl|\Delta_x - \Delta_y\bigr|.
+  \dlib(O,D) = \sqrt{2}\,\Delta_{\min} + \Delta_{\max} - \Delta_{\min}.
   \label{eq:dlib}
 \end{equation}
 Nessun cammino fra $O$ e $D$ può essere più corto, quindi $\dlib(O,D)$ è un
 limite inferiore della lunghezza di qualunque cammino fra le due celle. Il
 record \code{DistanzaLibera} conserva separatamente le due componenti del
-cammino libero, il numero di mosse rettilinee
-$\max(\Delta_x,\Delta_y) - \min(\Delta_x,\Delta_y)$ (componente ``torre'') e
-il numero di mosse diagonali $\min(\Delta_x,\Delta_y)$ (componente
+cammino libero, il numero di mosse rettilinee $\Delta_{\max} - \Delta_{\min}$
+(componente ``torre'') e il numero di mosse diagonali $\Delta_{\min}$ (componente
 ``alfiere''), insieme al valore reale della lunghezza.
 
 Due scelte riguardano l'aritmetica in virgola mobile:
@@ -199,9 +199,10 @@ Sia $n = WH$ il numero di celle.
 \paragraph{Tempo.} La copia iniziale degli ostacoli, la passata che rende
 esclusivo il complemento e la raccolta della chiusura scandiscono l'intera
 griglia: $\Theta(n)$. Le linee primarie hanno lunghezza complessiva
-$O(W+H)$. Le linee laterali che partono da una stessa linea primaria sono
-parallele e quindi disgiunte; ogni cella può essere raggiunta al più da una
-laterale per ciascuna delle due linee primarie che delimitano il suo ottante.
+$O(W+H)$. Le linee laterali che partono da una stessa linea primaria nella
+stessa direzione sono parallele, quindi disgiunte; ogni cella può essere
+attraversata al più da una laterale per ciascuna delle due linee primarie che
+delimitano il suo ottante.
 Le laterali visitano perciò $O(n)$ celle in totale. Il controllo della
 frontiera esamina otto vicini per ogni cella della chiusura, $O(n)$.
 Complessivamente il calcolo costa $\Theta(n)$, anche quando la chiusura è
@@ -232,18 +233,18 @@ sono in maiuscolo) e i conteggi coincidono con la \cref{tab:stati-esempio}.
 
 \begin{lstlisting}
 java -jar asd-project.jar --grid-input risultati/griglie_json/scenario_02_12x12_15ost_seed50.json --origin 0,0 --destination 10,10 --chiusura
-O#......#...
-cCCCCCC#....
-#CcccccCCCCC
-.CcccCCCCCC#
-#Cccc#.....#
-.CcccCCCCC#.
-.CcC#CccccCC
-.CcC.CccCCCC
-.C#C.Ccc#...
-.C#C.CcCK...
-.C.C.CcC.KD.
-#C.C.CcC#.K.
+O   #   .   .   .   .   .   .   #   .   .   .
+c   C   C   C   C   C   C   #   .   .   .   .
+#   C   c   c   c   c   c   C   C   C   C   C
+.   C   c   c   c   C   C   C   C   C   C   #
+#   C   c   c   c   #   .   .   .   .   .   #
+.   C   c   c   c   C   C   C   C   C   #   .
+.   C   c   C   #   C   c   c   c   c   C   C
+.   C   c   C   .   C   c   c   C   C   C   C
+.   C   #   C   .   C   c   c   #   .   .   .
+.   C   #   C   .   C   c   C   K   .   .   .
+.   C   .   C   .   C   c   C   .   K   D   .
+#   C   .   C   .   C   c   C   #   .   K   .
 Legenda: O origine, D destinazione, # ostacolo, c contesto (tipo 1), k complemento (tipo 2), maiuscole = frontiera, . fuori dalla chiusura
 Contesto: 82 celle | complemento: 3 celle | frontiera: 56 celle (53 di tipo 1, 3 di tipo 2)
 O=(0,0), D=(10,10): D si trova fuori dalla chiusura di O
@@ -252,12 +253,16 @@ dlib(O,D) = 0 + 10*sqrt(2) = 14.142136 (0 mosse rettilinee, 10 diagonali)
 
 \subsection{Verifica}
 
-Oltre ai test unitari su casi costruiti a mano, il calcolo della chiusura è
-confrontato con un oracolo indipendente. Il test enumera tutte le
-$2^9 = 512$ disposizioni di ostacoli su una griglia $3 \times 3$ e, per ogni
-origine libera, costruisce contesto e complemento elencando esplicitamente i
-cammini liberi di tipo~1 e di tipo~2. Contesto, complemento, chiusura e
-frontiera calcolati da \code{CalcoloChiusura} devono coincidere cella per
-cella con quelli dell'oracolo. Un test dedicato verifica che la mossa
+Oltre ai test unitari su casi costruiti a mano, \code{CalcoloChiusura} è
+confrontato con un \emph{oracolo}, cioè un'implementazione di riferimento che
+calcola lo stesso risultato con un metodo diverso e più semplice, così che un
+errore difficilmente sia comune ai due. L'oracolo
+(\code{CalcoloChiusuraOracleTest}) non usa linee primarie e laterali: per ogni
+cella $c$ percorre l'unico cammino di tipo~1 e l'unico di tipo~2 da $O$ a $c$
+e controlla che non attraversino ostacoli, applicando direttamente la
+definizione; la frontiera è ricavata dalla chiusura così ottenuta. Il test
+enumera tutte le $2^9 = 512$ disposizioni di ostacoli su una griglia
+$3\times3$ e, per ogni origine libera, richiede che contesto, complemento,
+chiusura e frontiera coincidano cella per cella. Un test dedicato verifica che la mossa
 diagonale fra due ostacoli adiacenti per uno spigolo sia ammessa e costi
 $\sqrt{2}$.

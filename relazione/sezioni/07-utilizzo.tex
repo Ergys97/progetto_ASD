@@ -113,12 +113,13 @@ java -jar asd-project.jar --grid-input risultati/prova.json --origin 0,0 --desti
 
 \begin{lstlisting}
 mvn -q clean package
-java -jar target/asd-project-1.0-SNAPSHOT.jar
+java -jar target/asd-project-1.0-SNAPSHOT.jar --help
 \end{lstlisting}
 
 Il primo comando compila il codice, esegue i 68 test e crea in
-\code{target/} un JAR equivalente a \code{asd-project.jar}. Per eseguire
-solo i test si usa \code{mvn -q test}.
+\code{target/} un JAR equivalente a \code{asd-project.jar}; il secondo ne
+verifica il funzionamento stampando le opzioni, senza riscrivere i risultati.
+Per eseguire solo i test si usa \code{mvn -q test}.
 
 \subsection{Grafici e relazione}
 

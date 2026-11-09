@@ -59,11 +59,10 @@ estrazioni è quindi
 \]
 che resta al più $2N$ finché $N \le WH/2$. L'inizializzazione della
 matrice e l'unica vista finale (\cref{sec:immutabilita}) costano $O(WH)$,
-quindi il costo complessivo è $O(WH)$ per $N \le WH/2$. Una prima versione
-creava una vista per ogni ostacolo, copiando ogni volta la mappa di bit, con
-costo $O(N \cdot WH)$: la versione attuale produce le stesse griglie, come
-verifica un test dedicato, e rende la generazione trascurabile anche per
-griglie molto più grandi di quelle usate nel progetto.
+quindi il costo atteso è $O(WH)$ per $N \le WH/2$; avvicinandosi a
+$N = WH$ le estrazioni attese crescono fino a $\Theta(WH \log WH)$. Gli
+ostacoli sono aggiunti con un'unica vista: aggiungerli uno alla volta
+copierebbe la mappa di bit a ogni passo, con costo $O(N \cdot WH)$.
 
 \subsection{Griglie immutabili}
 \label{sec:immutabilita}
