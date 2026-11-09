@@ -148,9 +148,9 @@ class MainCliTest {
                 output);
         assertTrue(output.contains("fuori dalla chiusura di O"), output);
         String[] mappa = output.split("\\R");
-        assertEquals("Occcc", mappa[0]);
-        assertEquals("c#KKk", mappa[1]);
-        assertEquals("cKDKk", mappa[2]);
+        assertEquals("O   c   c   c   c", mappa[0]);
+        assertEquals("c   #   K   K   k", mappa[1]);
+        assertEquals("c   K   D   K   k", mappa[2]);
 
         var g = mio.compito1.LettoreGriglia.carica(stati.toString());
         assertTrue(mio.compito2.StatoCella.ORIGINE.is(g.getCellaAt(0, 0).stato()));

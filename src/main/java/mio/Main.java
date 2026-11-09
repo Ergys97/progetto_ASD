@@ -304,6 +304,7 @@ public class Main {
                 }
                 if (StatoCella.ORIGINE.is(s)) ch = 'O';
                 else if (x == D.x() && y == D.y()) ch = 'D';
+                if (x > c.xmin()) sb.append("   ");
                 sb.append(ch);
             }
             sb.append('\n');

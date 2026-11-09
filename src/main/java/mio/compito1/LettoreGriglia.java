@@ -69,12 +69,20 @@ public class LettoreGriglia {
         if (g.width() <= 0 || g.height() <= 0) {
             throw new IllegalArgumentException("La griglia deve avere dimensioni positive");
         }
+        int larghezzaCampo = 1;
+        for (int y = g.ymin(); y <= g.ymax(); y++) {
+            for (int x = g.xmin(); x <= g.xmax(); x++) {
+                larghezzaCampo = Math.max(larghezzaCampo,
+                        Integer.toString(g.getCellaAt(x, y).stato()).length());
+            }
+        }
+        String formato = "%" + larghezzaCampo + "d";
         StringBuilder rows = new StringBuilder();
         rows.append("[\n");
         for (int y = g.ymin(); y <= g.ymax(); y++) {
             StringJoiner row = new StringJoiner(", ", "  [", "]");
             for (int x = g.xmin(); x <= g.xmax(); x++) {
-                row.add(Integer.toString(g.getCellaAt(x, y).stato()));
+                row.add(String.format(formato, g.getCellaAt(x, y).stato()));
             }
             rows.append(row);
             if (y < g.ymax()) {
